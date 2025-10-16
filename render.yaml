@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: cybernauts-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: cybernauts-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BCRYPT_ROUNDS
+        value: 12
+      - key: ENABLE_CLUSTERING
+        value: true
+      - key: LOG_LEVEL
+        value: info
+
+  - type: web
+    name: cybernauts-frontend
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: cybernauts-backend
+          property: host
+      - key: REACT_APP_ENV
+        value: production
+
+databases:
+  - name: cybernauts-db
+    plan: free
