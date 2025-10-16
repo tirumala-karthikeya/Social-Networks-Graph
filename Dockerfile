@@ -72,6 +72,6 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Start the application
+# Start the application - FIXED
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "backend/dist/index.js"]
+CMD ["node", "/app/backend/dist/index.js"]
