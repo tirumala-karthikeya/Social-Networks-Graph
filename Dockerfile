@@ -74,4 +74,4 @@ ENV PORT=5000
 
 # Start the application
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "echo 'Starting Cybernauts API...' && ls -la backend/dist/ && node backend/dist/index.js"]
+CMD ["node", "backend/dist/index.js"]
