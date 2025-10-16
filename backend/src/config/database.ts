@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jkarthikeya2004_db_user:karthikeya@cluster0.0ttdrk8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://jkarthikeya2004_db_user:karthikeya@cluster0.0ttdrk8.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0';
     
     const options = {
       maxPoolSize: 10,
