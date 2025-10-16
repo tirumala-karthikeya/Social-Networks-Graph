@@ -16,7 +16,7 @@ import { setupClustering, isClusteringEnabled } from './utils/cluster';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
 
 // Security middleware
 app.use(helmet({
@@ -125,7 +125,7 @@ const startServer = async (): Promise<void> => {
 
     // Start the server first (so health checks can work)
     console.log(`🔄 Starting server on port ${PORT}...`);
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Cybernauts API server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
@@ -140,8 +140,7 @@ const startServer = async (): Promise<void> => {
       });
     });
     
-    // Handle server startup errors
-    app.on('error', (error: any) => {
+    server.on('error', (error: any) => {
       console.error('❌ Server error:', error);
       if (error.code === 'EADDRINUSE') {
         console.error(`❌ Port ${PORT} is already in use`);
