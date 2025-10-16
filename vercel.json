@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+      "src": "backend/src/index.ts",
+      "use": "@vercel/node"
+    },
+    {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -12,14 +16,19 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://cybernauts-backend.onrender.com/api/$1"
+      "dest": "/backend/src/index.ts"
+    },
+    {
+      "src": "/health",
+      "dest": "/backend/src/index.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/frontend/build/$1"
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://cybernauts-backend.onrender.com/api"
+    "NODE_ENV": "production",
+    "ENABLE_CLUSTERING": "false"
   }
 }

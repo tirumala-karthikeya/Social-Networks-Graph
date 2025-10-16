@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: cybernauts
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ENABLE_CLUSTERING
+        value: false
+      - key: MONGODB_URI
+        fromDatabase:
+          name: cybernauts-db
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
