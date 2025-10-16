@@ -6,6 +6,10 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AppProvider } from './contexts/AppContext';
 import App from './components/App';
 import ErrorBoundary from './components/ErrorBoundary';
+import { initResizeObserverFix } from './utils/resizeObserverFix';
+
+// Initialize ResizeObserver error suppression
+const cleanupResizeObserverFix = initResizeObserverFix();
 
 // Create Material-UI theme
 const theme = createTheme({

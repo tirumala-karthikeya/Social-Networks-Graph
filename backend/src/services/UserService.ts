@@ -227,4 +227,33 @@ export class UserService {
       throw new Error(`Failed to fetch hobbies: ${error}`);
     }
   }
+
+  // Remove hobby from user
+  static async removeHobby(userId: string, hobby: string): Promise<IUserDocument | null> {
+    try {
+      const user = await User.findOne({ id: userId });
+      if (!user) {
+        return null;
+      }
+
+      // Check if user has this hobby
+      if (!user.hobbies.includes(hobby)) {
+        throw new Error('Hobby not found');
+      }
+
+      // Remove hobby from user
+      user.hobbies = user.hobbies.filter((h: string) => h !== hobby);
+      await user.save();
+
+      // Recalculate popularity score
+      await user.calculatePopularityScore();
+
+      return user;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Hobby not found') {
+        throw error;
+      }
+      throw new Error(`Failed to remove hobby: ${error}`);
+    }
+  }
 }

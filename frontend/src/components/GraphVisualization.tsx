@@ -12,6 +12,10 @@ import ReactFlow, {
   ReactFlowProvider,
   ReactFlowInstance,
   NodeTypes,
+  EdgeTypes,
+  BaseEdge,
+  EdgeProps,
+  getSmoothStepPath,
 } from 'reactflow';
 import { Box, Paper, Typography, IconButton, Tooltip } from '@mui/material';
 import { ZoomIn, ZoomOut, FitScreen, Refresh } from '@mui/icons-material';
@@ -20,10 +24,92 @@ import UserNode from './UserNode';
 import { GraphData, User } from '../types';
 import { useApp } from '../contexts/AppContext';
 
+// Custom edge component for better selection and double-click handling
+const CustomEdge: React.FC<EdgeProps> = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  selected,
+  data,
+}) => {
+  const [edgePath] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  // Handle double-click on edge
+  const handleDoubleClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    console.log('Edge double-clicked:', id);
+    
+    // Trigger edge deletion
+    if (data?.onEdgeDelete && data.source && data.target) {
+      data.onEdgeDelete(data.source, data.target);
+    }
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  const isInteractive = isHovered || selected;
+  const strokeColor = selected ? '#ff6b6b' : (isHovered ? '#ff9800' : '#1976d2');
+  const strokeWidth = selected ? 6 : (isHovered ? 5 : 4);
+
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        style={{
+          ...style,
+          strokeWidth: strokeWidth,
+          stroke: strokeColor,
+          strokeDasharray: selected ? '5,5' : 'none',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease-in-out',
+        }}
+      />
+      {/* Invisible clickable area for edge interaction */}
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={20}
+        style={{ cursor: 'pointer' }}
+        onClick={handleDoubleClick}
+        onDoubleClick={handleDoubleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      />
+    </>
+  );
+};
+
 // Custom node types
 const nodeTypes: NodeTypes = {
   HighScoreNode: UserNode,
   LowScoreNode: UserNode,
+};
+
+// Custom edge types
+const edgeTypes: EdgeTypes = {
+  custom: CustomEdge,
 };
 
 interface GraphVisualizationProps {
@@ -31,6 +117,7 @@ interface GraphVisualizationProps {
   onNodeClick?: (node: Node) => void;
   onNodeDrop?: (nodeId: string, hobby: string) => void;
   onNodeConnect?: (sourceId: string, targetId: string) => void;
+  onEdgeDelete?: (sourceId: string, targetId: string) => void;
 }
 
 const GraphVisualization: React.FC<GraphVisualizationProps> = ({
@@ -38,6 +125,7 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
   onNodeClick,
   onNodeDrop,
   onNodeConnect,
+  onEdgeDelete,
 }) => {
   const { state, refreshData } = useApp();
   const [nodes, setNodes, onNodesChange] = useNodesState(graphData.nodes);
@@ -57,20 +145,97 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
     }));
     console.log('Setting nodes:', draggableNodes.length, 'nodes with dragging enabled');
     setNodes(draggableNodes);
-    setEdges(graphData.edges);
-  }, [graphData, setNodes, setEdges]);
+    
+    // Update edges with onEdgeDelete callback
+    const edgesWithCallbacks = graphData.edges.map(edge => ({
+      ...edge,
+      type: 'custom',
+      data: {
+        source: edge.source,
+        target: edge.target,
+        onEdgeDelete: onEdgeDelete,
+      },
+    }));
+    setEdges(edgesWithCallbacks);
+    
+    // Only fit view on initial load, not on every data change
+    // This prevents ResizeObserver loops during edge operations
+    if (reactFlowInstance && nodes.length === 0) {
+      const timeoutId = setTimeout(() => {
+        if (reactFlowInstance) {
+          reactFlowInstance.fitView({ padding: 0.1 });
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [graphData, setNodes, setEdges, reactFlowInstance, onEdgeDelete, nodes.length]);
+
+  // Enhanced ResizeObserver error handling for this component
+  React.useEffect(() => {
+    const handleResizeObserverError = (e: ErrorEvent) => {
+      if (e.message && e.message.includes('ResizeObserver loop completed with undelivered notifications')) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    window.addEventListener('error', handleResizeObserverError, true);
+    
+    return () => {
+      window.removeEventListener('error', handleResizeObserverError, true);
+    };
+  }, []);
+
+  // Handle keyboard events for edge deletion
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        // Get selected edges
+        const selectedEdges = edges.filter(edge => edge.selected);
+        if (selectedEdges.length > 0) {
+          console.log('Deleting selected edges via keyboard:', selectedEdges);
+          selectedEdges.forEach(edge => {
+            if (edge.source && edge.target) {
+              onEdgeDelete?.(edge.source, edge.target);
+            }
+          });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [edges, onEdgeDelete]);
 
   // Handle node connection
   const onConnect = useCallback(
     (connection: Connection) => {
       console.log('Connection created:', connection);
       if (connection.source && connection.target && connection.source !== connection.target) {
-        setEdges((eds) => addEdge({ ...connection, animated: true }, eds));
+        const newEdge = {
+          ...connection,
+          animated: true,
+          type: 'custom',
+          data: {
+            source: connection.source,
+            target: connection.target,
+            onEdgeDelete: onEdgeDelete,
+          },
+        };
+        setEdges((eds) => addEdge(newEdge, eds));
         console.log('Creating friendship between:', connection.source, 'and', connection.target);
         onNodeConnect?.(connection.source, connection.target);
+        
+        // Prevent automatic fitView after edge creation to avoid ResizeObserver issues
+        // The user can manually fit view if needed using the controls
       }
     },
-    [onNodeConnect, setEdges]
+    [onNodeConnect, setEdges, onEdgeDelete]
   );
 
   // Handle node click
@@ -80,6 +245,23 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
       onNodeClick?.(node);
     },
     [onNodeClick]
+  );
+
+  // Handle edge deletion
+  const handleEdgeDelete = useCallback(
+    (deletedEdges: Edge[]) => {
+      console.log('Edge deletion triggered, deleted edges:', deletedEdges);
+      deletedEdges.forEach(edge => {
+        if (edge.source && edge.target) {
+          console.log('Deleting edge:', edge.source, '->', edge.target);
+          onEdgeDelete?.(edge.source, edge.target);
+        }
+      });
+      
+      // Prevent automatic fitView after edge deletion to avoid ResizeObserver issues
+      // The user can manually fit view if needed using the controls
+    },
+    [onEdgeDelete]
   );
 
   // Handle drag over (for hobby assignment)
@@ -109,7 +291,7 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
     // Find closest node - INCREASED RANGE
     let closestNode: Node | null = null;
     let minDistance = Infinity;
-    const DETECTION_RANGE = 1000; 
+    const DETECTION_RANGE = 2000; 
 
     console.log('Drop position:', position);
     console.log('Available nodes:', nodes.length);
@@ -176,11 +358,13 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={handleNodeClick}
+          onEdgesDelete={handleEdgeDelete}
           onInit={setReactFlowInstance}
           onDrop={onNodeDropOnNode}
           onDragOver={onNodeDragOver}
           nodeTypes={nodeTypes}
-          fitView
+          edgeTypes={edgeTypes}
+          fitView={false}
           attributionPosition="bottom-left"
           nodesDraggable={true}
           nodesConnectable={true}
@@ -192,11 +376,12 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
           deleteKeyCode="delete"
           defaultEdgeOptions={{
             style: { 
-              strokeWidth: 3, 
+              strokeWidth: 4, 
               stroke: '#1976d2',
             },
-            type: 'smoothstep',
-            animated: true,
+            type: 'custom',
+            animated: false,
+            deletable: true,
           }}
           connectionLineStyle={{ 
             strokeWidth: 3, 
@@ -205,6 +390,20 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
           style={{
             backgroundColor: '#f5f5f5',
           }}
+          proOptions={{
+            hideAttribution: true,
+          }}
+          minZoom={0.1}
+          maxZoom={2}
+          onlyRenderVisibleElements={true}
+          nodesFocusable={false}
+          edgesFocusable={true}
+          panOnScroll={true}
+          zoomOnScroll={true}
+          zoomOnPinch={true}
+          preventScrolling={false}
+          elevateNodesOnSelect={false}
+          elevateEdgesOnSelect={false}
         >
           <Background color="#aaa" gap={16} />
           <Controls />
@@ -278,6 +477,12 @@ const GraphVisualization: React.FC<GraphVisualizationProps> = ({
           <Typography variant="body2" color="text.secondary">
             Low Score: {nodes.filter(n => n.type === 'LowScoreNode').length}
           </Typography>
+          {/* <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            💡 Double-click on a connection line OR click it (turns red) and press Delete to unlink friends
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            🔗 Drag from node handles to create new connections
+          </Typography> */}
         </Paper>
 
         {/* Drag Overlay */}

@@ -310,4 +310,49 @@ router.post('/:id/link', validateUUID, validate(relationshipSchema), UserControl
  */
 router.delete('/:id/unlink', validateUUID, validate(relationshipSchema), UserController.removeFriendship);
 
+/**
+ * @swagger
+ * /users/{id}/hobbies/{hobby}:
+ *   delete:
+ *     summary: Remove hobby from user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID
+ *       - in: path
+ *         name: hobby
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Hobby to remove
+ *     responses:
+ *       200:
+ *         description: Hobby removed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *                 message:
+ *                   type: string
+ *                   example: Hobby removed successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: Hobby not found
+ */
+router.delete('/:id/hobbies/:hobby', validateUUID, UserController.removeHobby);
+
 export default router;

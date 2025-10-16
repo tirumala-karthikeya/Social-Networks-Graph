@@ -117,6 +117,15 @@ export const hobbyApi = {
     const response = await api.get<ApiResponse<string[]>>('/hobbies');
     return response.data.data || [];
   },
+
+  // Remove hobby from user
+  removeHobbyFromUser: async (userId: string, hobby: string): Promise<User> => {
+    const response = await api.delete<ApiResponse<User>>(`/users/${userId}/hobbies/${encodeURIComponent(hobby)}`);
+    if (!response.data.data) {
+      throw new Error('Failed to remove hobby');
+    }
+    return response.data.data;
+  },
 };
 
 export const healthApi = {

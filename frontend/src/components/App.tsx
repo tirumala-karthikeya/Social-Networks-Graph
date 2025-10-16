@@ -12,7 +12,7 @@ import { useApp } from '../contexts/AppContext';
 import { User } from '../types';
 
 const App: React.FC = () => {
-  const { state, undo, redo, saveState, refreshData, updateUser, addFriendship, addHobby } = useApp();
+  const { state, undo, redo, saveState, refreshData, updateUser, addFriendship, removeFriendship, addHobby, removeHobbyFromAllUsers } = useApp();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Handle node click
@@ -63,6 +63,26 @@ const App: React.FC = () => {
   const handleAddHobby = useCallback((hobby: string) => {
     addHobby(hobby);
   }, [addHobby]);
+
+  // Handle remove hobby from all users
+  const handleRemoveHobby = useCallback(async (hobby: string) => {
+    await removeHobbyFromAllUsers(hobby);
+  }, [removeHobbyFromAllUsers]);
+
+  // Handle edge deletion (unlink friends)
+  const handleEdgeDelete = useCallback(async (sourceId: string, targetId: string) => {
+    console.log('handleEdgeDelete called with:', sourceId, targetId);
+    try {
+      console.log('Removing friendship...');
+      await removeFriendship(sourceId, targetId);
+      console.log('Friendship removed successfully');
+      // Refresh data to update the graph with removed edges
+      await refreshData();
+      console.log('Data refreshed after friendship removal');
+    } catch (error) {
+      console.error('Failed to remove friendship:', error);
+    }
+  }, [removeFriendship, refreshData]);
 
   // Handle undo/redo
   const handleUndo = useCallback(() => {
@@ -134,6 +154,7 @@ const App: React.FC = () => {
         <HobbySidebar
           onHobbyDrag={handleAddHobby}
           onAddHobby={handleAddHobby}
+          onRemoveHobby={handleRemoveHobby}
         />
 
         {/* Center - Graph Visualization */}
@@ -143,6 +164,7 @@ const App: React.FC = () => {
             onNodeClick={handleNodeClick}
             onNodeDrop={handleHobbyDrop}
             onNodeConnect={handleNodeConnect}
+            onEdgeDelete={handleEdgeDelete}
           />
         </Box>
 

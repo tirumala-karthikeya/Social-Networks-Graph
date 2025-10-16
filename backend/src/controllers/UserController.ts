@@ -189,4 +189,31 @@ export class UserController {
       ApiResponse.error(res, 'Failed to fetch hobbies', 500, error);
     }
   }
+
+  // DELETE /api/users/:id/hobbies/:hobby
+  static async removeHobby(req: Request, res: Response): Promise<void> {
+    try {
+      const { id, hobby } = req.params;
+      
+      if (!hobby) {
+        ApiResponse.error(res, 'Hobby is required', 400);
+        return;
+      }
+
+      const user = await UserService.removeHobby(id, hobby);
+      
+      if (!user) {
+        ApiResponse.notFound(res, 'User');
+        return;
+      }
+
+      ApiResponse.success(res, user, 'Hobby removed successfully');
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Hobby not found') {
+        ApiResponse.conflict(res, error.message);
+        return;
+      }
+      ApiResponse.error(res, 'Failed to remove hobby', 500, error);
+    }
+  }
 }

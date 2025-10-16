@@ -19,6 +19,7 @@ import {
   DragIndicator,
   FilterList,
   Clear,
+  Delete,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../contexts/AppContext';
@@ -26,11 +27,13 @@ import { useApp } from '../contexts/AppContext';
 interface HobbySidebarProps {
   onHobbyDrag?: (hobby: string) => void;
   onAddHobby?: (hobby: string) => void;
+  onRemoveHobby?: (hobby: string) => void;
 }
 
 const HobbySidebar: React.FC<HobbySidebarProps> = ({
   onHobbyDrag,
   onAddHobby,
+  onRemoveHobby,
 }) => {
   const { state, dispatch } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,6 +93,13 @@ const HobbySidebar: React.FC<HobbySidebarProps> = ({
   // Clear search
   const clearSearch = () => {
     setSearchQuery('');
+  };
+
+  // Handle remove hobby
+  const handleRemoveHobby = (hobby: string) => {
+    if (window.confirm(`Are you sure you want to remove "${hobby}" from all users?`)) {
+      onRemoveHobby?.(hobby);
+    }
   };
 
   return (
@@ -207,6 +217,21 @@ const HobbySidebar: React.FC<HobbySidebarProps> = ({
                       color={hobbyStats[hobby] > 2 ? 'primary' : 'default'}
                       sx={{ minWidth: 24, height: 20 }}
                     />
+                    <Tooltip title="Remove hobby from all users">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveHobby(hobby);
+                        }}
+                        sx={{ 
+                          color: 'error.main',
+                          '&:hover': { backgroundColor: 'error.light', color: 'white' }
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Paper>
               </motion.div>
@@ -233,14 +258,14 @@ const HobbySidebar: React.FC<HobbySidebarProps> = ({
       </Box>
 
       {/* Footer */}
-      <Box sx={{ padding: 2, borderTop: '1px solid #e0e0e0' }}>
+      {/* <Box sx={{ padding: 2, borderTop: '1px solid #e0e0e0' }}>
         <Typography variant="caption" color="text.secondary" display="block">
           💡 Drag hobbies onto user nodes to assign them
         </Typography>
         <Typography variant="caption" color="text.secondary" display="block">
           📊 Numbers show how many users have each hobby
         </Typography>
-      </Box>
+      </Box> */}
     </Paper>
   );
 };

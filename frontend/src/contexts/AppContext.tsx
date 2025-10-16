@@ -181,6 +181,8 @@ interface AppContextType {
   addFriendship: (userId: string, friendId: string) => Promise<void>;
   removeFriendship: (userId: string, friendId: string) => Promise<void>;
   addHobby: (hobby: string) => void;
+  removeHobbyFromUser: (userId: string, hobby: string) => Promise<void>;
+  removeHobbyFromAllUsers: (hobby: string) => Promise<void>;
   refreshData: () => Promise<void>;
   saveState: () => void;
   undo: () => void;
@@ -294,6 +296,44 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const removeHobbyFromUser = async (userId: string, hobby: string): Promise<void> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const updatedUser = await hobbyApi.removeHobbyFromUser(userId, hobby);
+      dispatch({ type: 'UPDATE_USER', payload: updatedUser });
+      toast.success(`Hobby "${hobby}" removed successfully!`);
+      await refreshData(); // Refresh to get updated graph data
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to remove hobby';
+      dispatch({ type: 'SET_ERROR', payload: message });
+      toast.error(message);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  const removeHobbyFromAllUsers = async (hobby: string): Promise<void> => {
+    try {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // Find all users who have this hobby
+      const usersWithHobby = state.users.filter(user => user.hobbies.includes(hobby));
+      
+      // Remove hobby from each user
+      const promises = usersWithHobby.map(user => hobbyApi.removeHobbyFromUser(user.id, hobby));
+      await Promise.all(promises);
+      
+      toast.success(`Hobby "${hobby}" removed from all users successfully!`);
+      await refreshData(); // Refresh to get updated graph data
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to remove hobby';
+      dispatch({ type: 'SET_ERROR', payload: message });
+      toast.error(message);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
   const refreshData = async (): Promise<void> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -340,6 +380,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     addFriendship,
     removeFriendship,
     addHobby,
+    removeHobbyFromUser,
+    removeHobbyFromAllUsers,
     refreshData,
     saveState,
     undo,
