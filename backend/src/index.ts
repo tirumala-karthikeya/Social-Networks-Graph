@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import dotenv from 'dotenv';
+import path from 'path';
 import { connectDatabase } from './config/database';
 import { setupSwagger } from './config/swagger';
 import routes from './routes';
@@ -53,20 +54,17 @@ setupSwagger(app);
 // API routes
 app.use('/api', routes);
 
-// Root route
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, '../../public')));
+
+// Root route - serve the React app
 app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Welcome to Cybernauts API',
-    version: '1.0.0',
-    documentation: '/api-docs',
-    endpoints: {
-      users: '/api/users',
-      graph: '/api/graph',
-      hobbies: '/api/hobbies',
-      health: '/api/health'
-    }
-  });
+  res.sendFile(path.join(__dirname, '../../public/index.html'));
+});
+
+// Catch all handler: send back React's index.html file for any non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../public/index.html'));
 });
 
 // Error handling middleware

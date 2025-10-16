@@ -52,8 +52,8 @@ COPY --from=builder --chown=cybernauts:nodejs /app/backend/node_modules ./backen
 # Verify backend files exist
 RUN ls -la backend/dist/ && test -f backend/dist/index.js
 
-# Copy built frontend
-COPY --from=builder --chown=cybernauts:nodejs /app/frontend/build ./frontend/build
+# Copy built frontend to serve as static files
+COPY --from=builder --chown=cybernauts:nodejs /app/frontend/build ./public
 
 # Copy other necessary files
 COPY --from=builder --chown=cybernauts:nodejs /app/package*.json ./
