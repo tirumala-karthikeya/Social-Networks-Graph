@@ -17,11 +17,15 @@ RUN cd frontend && npm install
 # Copy source code
 COPY . .
 
+# Verify frontend structure
+RUN ls -la frontend/
+RUN ls -la frontend/public/
+
 # Build backend
 RUN cd backend && npm run build
 
-# Build frontend (with proper permissions)
-RUN cd frontend && chmod -R 755 public && npm run build
+# Build frontend
+RUN cd frontend && npm run build
 
 # Production stage
 FROM node:18-alpine AS production
