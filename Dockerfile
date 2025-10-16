@@ -20,8 +20,8 @@ COPY . .
 # Build backend
 RUN cd backend && npm run build
 
-# Build frontend
-RUN cd frontend && npm run build
+# Build frontend (with proper permissions)
+RUN cd frontend && chmod -R 755 public && npm run build
 
 # Production stage
 FROM node:18-alpine AS production
