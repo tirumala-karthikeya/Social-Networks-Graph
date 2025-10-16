@@ -57,6 +57,43 @@ app.use('/api', routes);
 // Serve static files from the React app build directory
 app.use(express.static(path.join(__dirname, '../../public')));
 
+// Health check route (before API routes)
+app.get('/health', (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const dbStatus = mongoose.connection.readyState as number;
+    const dbStates: Record<number, string> = {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting',
+      3: 'disconnecting'
+    };
+    
+    res.status(200).json({
+      success: true,
+      message: 'Cybernauts API is running',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      database: {
+        status: dbStates[dbStatus] || 'unknown',
+        connected: dbStatus === 1
+      },
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || 5000
+    });
+  } catch (error) {
+    // Fallback health check if mongoose is not available
+    res.status(200).json({
+      success: true,
+      message: 'Cybernauts API is running (basic health check)',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      port: process.env.PORT || 5000
+    });
+  }
+});
+
 // Root route - serve the React app
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../../public/index.html'));
@@ -74,18 +111,26 @@ app.use(errorHandler);
 // Start server
 const startServer = async (): Promise<void> => {
   try {
+    console.log('🔄 Starting server...');
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+    console.log(`🔧 Clustering enabled: ${isClusteringEnabled()}`);
+    
     // Setup clustering if enabled
     if (isClusteringEnabled()) {
+      console.log('🔄 Setting up clustering...');
       setupClustering();
       return;
     }
 
     // Start the server first (so health checks can work)
-    app.listen(PORT, () => {
+    console.log(`🔄 Starting server on port ${PORT}...`);
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Cybernauts API server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/health`);
+      console.log(`✅ Server is ready to accept connections`);
       
       // Connect to database in the background (non-blocking)
       connectDatabase().catch((error) => {
@@ -94,6 +139,16 @@ const startServer = async (): Promise<void> => {
         // The app can still serve static files and basic endpoints
       });
     });
+    
+    // Handle server startup errors
+    app.on('error', (error: any) => {
+      console.error('❌ Server error:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use`);
+      }
+      process.exit(1);
+    });
+    
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
