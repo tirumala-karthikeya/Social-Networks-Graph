@@ -92,9 +92,9 @@ USER cybernauts
 # Expose port
 EXPOSE 5000
 
-# Health check - simplified to avoid potential issues
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "process.exit(0)"
+# Health check disabled - Railway handles health checks
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#   CMD node -e "process.exit(0)"
 
 # Set environment variables
 ENV NODE_ENV=production

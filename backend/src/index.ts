@@ -80,15 +80,19 @@ const startServer = async (): Promise<void> => {
       return;
     }
 
-    // Connect to database
-    await connectDatabase();
-    
-    // Start the server
+    // Start the server first (so health checks can work)
     app.listen(PORT, () => {
       console.log(`🚀 Cybernauts API server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api/health`);
+      
+      // Connect to database in the background (non-blocking)
+      connectDatabase().catch((error) => {
+        console.error('❌ MongoDB connection failed (will retry):', error.message);
+        // Don't exit the process, just log the error
+        // The app can still serve static files and basic endpoints
+      });
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

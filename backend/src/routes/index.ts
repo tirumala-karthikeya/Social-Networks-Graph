@@ -84,11 +84,26 @@ router.use('/docs', docsRoutes);
  *                   example: 1.0.0
  */
 router.get('/health', (req, res) => {
+  const mongoose = require('mongoose');
+  const dbStatus = mongoose.connection.readyState as number;
+  const dbStates: Record<number, string> = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  
   res.status(200).json({
     success: true,
     message: 'Cybernauts API is running',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    database: {
+      status: dbStates[dbStatus] || 'unknown',
+      connected: dbStatus === 1
+    },
+    environment: process.env.NODE_ENV || 'development',
+    port: process.env.PORT || 5000
   });
 });
 

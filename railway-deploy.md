@@ -16,17 +16,24 @@ Make sure to set these environment variables in your Railway project:
 
 ## Common Issues and Solutions:
 
-### 1. Container fails to start
+### 1. Health check fails
+- The app now starts the server first, then connects to MongoDB in the background
+- Health checks will work even if MongoDB is temporarily unavailable
+- Check Railway logs for specific error messages
+
+### 2. Container fails to start
 - Check that `MONGODB_URI` is set correctly
 - Ensure `ENABLE_CLUSTERING=false` is set
 - Verify the MongoDB connection string is accessible from Railway's network
 
-### 2. Database connection fails
+### 3. Database connection fails
+- The app will continue running even if MongoDB connection fails initially
+- Check the logs for MongoDB connection errors
 - Verify your MongoDB Atlas cluster allows connections from Railway's IP ranges
 - Check that the MongoDB user has the correct permissions
 - Ensure the database name is included in the connection string
 
-### 3. Port binding issues
+### 4. Port binding issues
 - Railway automatically sets the `PORT` environment variable
 - The app is configured to use `process.env.PORT || 5000`
 
