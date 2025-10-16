@@ -60,10 +60,15 @@ COPY --from=builder --chown=cybernauts:nodejs /app/package*.json ./
 
 # Create a startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'echo "Starting Cybernauts application..."' >> /app/start.sh && \
+    echo 'echo "=== Cybernauts Startup Script ==="' >> /app/start.sh && \
     echo 'echo "Working directory: $(pwd)"' >> /app/start.sh && \
+    echo 'echo "Environment variables:"' >> /app/start.sh && \
+    echo 'echo "NODE_ENV: $NODE_ENV"' >> /app/start.sh && \
+    echo 'echo "PORT: $PORT"' >> /app/start.sh && \
     echo 'echo "Backend files:"' >> /app/start.sh && \
     echo 'ls -la /app/backend/dist/' >> /app/start.sh && \
+    echo 'echo "Checking if backend index.js exists:"' >> /app/start.sh && \
+    echo 'test -f /app/backend/dist/index.js && echo "✅ Backend index.js found" || echo "❌ Backend index.js not found"' >> /app/start.sh && \
     echo 'echo "Starting backend server..."' >> /app/start.sh && \
     echo 'exec node /app/backend/dist/index.js' >> /app/start.sh && \
     chmod +x /app/start.sh && \
@@ -83,6 +88,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENV NODE_ENV=production
 ENV PORT=5000
 
+# Ensure we're in the right directory
+WORKDIR /app
+
 # Start the application - FIXED
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["/app/start.sh"]
+ENTRYPOINT ["dumb-init", "--", "node", "/app/backend/dist/index.js"]
