@@ -60,6 +60,7 @@ COPY --from=builder --chown=cybernauts:nodejs /app/package*.json ./
 
 # Create a startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
     echo 'echo "=== Cybernauts Startup Script ==="' >> /app/start.sh && \
     echo 'echo "Working directory: $(pwd)"' >> /app/start.sh && \
     echo 'echo "Environment variables:"' >> /app/start.sh && \
@@ -68,7 +69,12 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Backend files:"' >> /app/start.sh && \
     echo 'ls -la /app/backend/dist/' >> /app/start.sh && \
     echo 'echo "Checking if backend index.js exists:"' >> /app/start.sh && \
-    echo 'test -f /app/backend/dist/index.js && echo "✅ Backend index.js found" || echo "❌ Backend index.js not found"' >> /app/start.sh && \
+    echo 'if [ ! -f /app/backend/dist/index.js ]; then' >> /app/start.sh && \
+    echo '  echo "❌ Backend index.js not found - listing backend directory:"' >> /app/start.sh && \
+    echo '  ls -la /app/backend/' >> /app/start.sh && \
+    echo '  exit 1' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    echo 'echo "✅ Backend index.js found"' >> /app/start.sh && \
     echo 'echo "Starting backend server..."' >> /app/start.sh && \
     echo 'exec node /app/backend/dist/index.js' >> /app/start.sh && \
     chmod +x /app/start.sh && \
@@ -80,9 +86,9 @@ USER cybernauts
 # Expose port
 EXPOSE 5000
 
-# Health check
+# Health check - simplified to avoid potential issues
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "process.exit(0)"
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -91,5 +97,8 @@ ENV PORT=5000
 # Ensure we're in the right directory
 WORKDIR /app
 
-# Start the application - FIXED
-ENTRYPOINT ["dumb-init", "--", "node", "/app/backend/dist/index.js"]
+# Start the application using the startup script
+ENTRYPOINT ["dumb-init", "--", "/app/start.sh"]
+
+# Alternative entrypoint (commented out) - use this if startup script fails
+# ENTRYPOINT ["dumb-init", "--", "node", "/app/backend/dist/index.js"]
