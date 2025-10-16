@@ -25,6 +25,8 @@ RUN if [ ! -f frontend/public/index.html ]; then \
 
 # Build backend
 RUN cd backend && npm run build
+RUN ls -la backend/dist/ || echo "Backend dist directory not found"
+RUN test -f backend/dist/index.js && echo "Backend index.js found" || echo "Backend index.js not found"
 
 # Build frontend
 RUN cd frontend && npm run build
@@ -47,6 +49,9 @@ COPY --from=builder --chown=cybernauts:nodejs /app/backend/dist ./backend/dist
 COPY --from=builder --chown=cybernauts:nodejs /app/backend/package*.json ./backend/
 COPY --from=builder --chown=cybernauts:nodejs /app/backend/node_modules ./backend/node_modules
 
+# Verify backend files exist
+RUN ls -la backend/dist/ && test -f backend/dist/index.js
+
 # Copy built frontend
 COPY --from=builder --chown=cybernauts:nodejs /app/frontend/build ./frontend/build
 
@@ -63,6 +68,10 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=5000
+
 # Start the application
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "backend/dist/index.js"]
+CMD ["sh", "-c", "echo 'Starting Cybernauts API...' && ls -la backend/dist/ && node backend/dist/index.js"]
