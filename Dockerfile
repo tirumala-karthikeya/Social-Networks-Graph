@@ -66,6 +66,8 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Environment variables:"' >> /app/start.sh && \
     echo 'echo "NODE_ENV: $NODE_ENV"' >> /app/start.sh && \
     echo 'echo "PORT: $PORT"' >> /app/start.sh && \
+    echo 'echo "ENABLE_CLUSTERING: $ENABLE_CLUSTERING"' >> /app/start.sh && \
+    echo 'echo "MONGODB_URI: ${MONGODB_URI:+[SET]}"' >> /app/start.sh && \
     echo 'echo "Backend files:"' >> /app/start.sh && \
     echo 'ls -la /app/backend/dist/' >> /app/start.sh && \
     echo 'echo "Checking if backend index.js exists:"' >> /app/start.sh && \
@@ -76,6 +78,10 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'fi' >> /app/start.sh && \
     echo 'echo "✅ Backend index.js found"' >> /app/start.sh && \
     echo 'echo "Starting backend server..."' >> /app/start.sh && \
+    echo 'echo "If the server fails to start, check:"' >> /app/start.sh && \
+    echo 'echo "1. MongoDB connection (MONGODB_URI environment variable)"' >> /app/start.sh && \
+    echo 'echo "2. Port availability (PORT environment variable)"' >> /app/start.sh && \
+    echo 'echo "3. Clustering configuration (ENABLE_CLUSTERING environment variable)"' >> /app/start.sh && \
     echo 'exec node /app/backend/dist/index.js' >> /app/start.sh && \
     chmod +x /app/start.sh && \
     chown cybernauts:nodejs /app/start.sh
@@ -93,6 +99,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=5000
+# Disable clustering for Railway deployment (Railway handles scaling)
+ENV ENABLE_CLUSTERING=false
 
 # Ensure we're in the right directory
 WORKDIR /app
