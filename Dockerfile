@@ -58,6 +58,17 @@ COPY --from=builder --chown=cybernauts:nodejs /app/frontend/build ./public
 # Copy other necessary files
 COPY --from=builder --chown=cybernauts:nodejs /app/package*.json ./
 
+# Create a startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'echo "Starting Cybernauts application..."' >> /app/start.sh && \
+    echo 'echo "Working directory: $(pwd)"' >> /app/start.sh && \
+    echo 'echo "Backend files:"' >> /app/start.sh && \
+    echo 'ls -la /app/backend/dist/' >> /app/start.sh && \
+    echo 'echo "Starting backend server..."' >> /app/start.sh && \
+    echo 'exec node /app/backend/dist/index.js' >> /app/start.sh && \
+    chmod +x /app/start.sh && \
+    chown cybernauts:nodejs /app/start.sh
+
 # Switch to non-root user
 USER cybernauts
 
@@ -74,4 +85,4 @@ ENV PORT=5000
 
 # Start the application - FIXED
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "/app/backend/dist/index.js"]
+CMD ["/app/start.sh"]
