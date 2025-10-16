@@ -17,9 +17,11 @@ RUN cd frontend && npm install
 # Copy source code
 COPY . .
 
-# Verify frontend structure
-RUN ls -la frontend/
-RUN ls -la frontend/public/
+# Ensure frontend public directory exists and has required files
+RUN mkdir -p frontend/public
+RUN if [ ! -f frontend/public/index.html ]; then \
+    echo '<!DOCTYPE html><html><head><title>Cybernauts</title></head><body><div id="root"></div></body></html>' > frontend/public/index.html; \
+    fi
 
 # Build backend
 RUN cd backend && npm run build
