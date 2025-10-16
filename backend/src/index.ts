@@ -55,7 +55,32 @@ setupSwagger(app);
 app.use('/api', routes);
 
 // Serve static files from the React app build directory
-app.use(express.static(path.join(__dirname, '../../public')));
+// Handle both Docker and Vercel environments
+const staticPath = path.join(__dirname, '../../public');
+const vercelStaticPath = path.join(__dirname, '../public');
+const frontendBuildPath = path.join(__dirname, '../../frontend/build');
+
+console.log('Checking for static files in:', {
+  staticPath,
+  vercelStaticPath,
+  frontendBuildPath,
+  staticExists: require('fs').existsSync(staticPath),
+  vercelExists: require('fs').existsSync(vercelStaticPath),
+  frontendExists: require('fs').existsSync(frontendBuildPath)
+});
+
+if (require('fs').existsSync(staticPath)) {
+  app.use(express.static(staticPath));
+  console.log('Serving static files from:', staticPath);
+} else if (require('fs').existsSync(vercelStaticPath)) {
+  app.use(express.static(vercelStaticPath));
+  console.log('Serving static files from:', vercelStaticPath);
+} else if (require('fs').existsSync(frontendBuildPath)) {
+  app.use(express.static(frontendBuildPath));
+  console.log('Serving static files from:', frontendBuildPath);
+} else {
+  console.log('Static files directory not found, serving basic response');
+}
 
 // Health check route (before API routes)
 app.get('/health', (req, res) => {
@@ -96,12 +121,73 @@ app.get('/health', (req, res) => {
 
 // Root route - serve the React app
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../public/index.html'));
+  const indexPath = path.join(__dirname, '../../public/index.html');
+  const vercelIndexPath = path.join(__dirname, '../public/index.html');
+  const frontendIndexPath = path.join(__dirname, '../../frontend/build/index.html');
+  
+  console.log('Looking for index.html in:', {
+    indexPath,
+    vercelIndexPath,
+    frontendIndexPath,
+    indexExists: require('fs').existsSync(indexPath),
+    vercelExists: require('fs').existsSync(vercelIndexPath),
+    frontendExists: require('fs').existsSync(frontendIndexPath)
+  });
+  
+  if (require('fs').existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else if (require('fs').existsSync(vercelIndexPath)) {
+    res.sendFile(vercelIndexPath);
+  } else if (require('fs').existsSync(frontendIndexPath)) {
+    res.sendFile(frontendIndexPath);
+  } else {
+    // Fallback HTML if React app not found
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Cybernauts API</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .api-link { color: #2196f3; text-decoration: none; }
+            .api-link:hover { text-decoration: underline; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>🚀 Cybernauts API</h1>
+            <p>Your API is running successfully!</p>
+            <h2>Available Endpoints:</h2>
+            <ul>
+              <li><a href="/health" class="api-link">Health Check</a></li>
+              <li><a href="/api/health" class="api-link">API Health</a></li>
+              <li><a href="/api/users" class="api-link">Users API</a></li>
+            </ul>
+            <p><strong>Note:</strong> The React frontend is not available. This might be a deployment configuration issue.</p>
+            <p><strong>Debug Info:</strong> Check Vercel function logs for static file paths.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
 });
 
 // Catch all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../public/index.html'));
+  const indexPath = path.join(__dirname, '../../public/index.html');
+  const vercelIndexPath = path.join(__dirname, '../public/index.html');
+  const frontendIndexPath = path.join(__dirname, '../../frontend/build/index.html');
+  
+  if (require('fs').existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else if (require('fs').existsSync(vercelIndexPath)) {
+    res.sendFile(vercelIndexPath);
+  } else if (require('fs').existsSync(frontendIndexPath)) {
+    res.sendFile(frontendIndexPath);
+  } else {
+    res.status(404).json({ error: 'Not found', path: req.path });
+  }
 });
 
 // Error handling middleware

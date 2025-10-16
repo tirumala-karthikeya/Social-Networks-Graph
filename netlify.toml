@@ -6,7 +6,7 @@
   publish = "build/"
   
   # Default build command
-  command = "npm run build:netlify"
+  command = "npm run build"
 
 [build.environment]
   # Node.js version
@@ -17,7 +17,7 @@
 # Redirect rules for SPA (Single Page Application)
 [[redirects]]
   from = "/api/*"
-  to = "https://cybernauts-backend.onrender.com/api/:splat"
+  to = "https://cybernauts-eta.vercel.app/api/:splat"
   status = 200
   force = true
 
@@ -64,6 +64,7 @@
   # Enable form detection
   enabled = true
 
-# Edge functions (if needed)
-[edge_functions]
-  directory = "netlify/edge-functions"
+# Edge functions (if needed) - commented out since not using
+# [[edge_functions]]
+#   path = "/api/*"
+#   function = "api-handler"
